@@ -7,6 +7,7 @@ NOTE:
    and noted the source material and am letting it stand by itself.
 
    Source material: (in no particular order, and, yes, I realize SteamDatabase was deriviative)
+   
           https://github.com/wchill/Steam
           https://github.com/YeOldeWH/MonsterMinigameWormholeWarp
           https://github.com/SteamDatabase/steamSummerMinigame
