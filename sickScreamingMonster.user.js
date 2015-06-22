@@ -6,7 +6,7 @@
 // @match *://steamcommunity.com/minigame/towerattack*
 // @match *://steamcommunity.com//minigame/towerattack*
 // @grant none
-// @updateURL file:///G:\code\freshstart\SteamSummerMinigame\SickScreamingMonster\sickScreamingMonster.user.js
+// @updateURL https://raw.githubusercontent.com/shelleybutterfly/SickScreamingMonster/master/sickScreamingMonster.user.js
 // @downloadURL https://raw.githubusercontent.com/shelleybutterfly/SickScreamingMonster/master/sickScreamingMonster.user.js
 // ==/UserScript==
 
