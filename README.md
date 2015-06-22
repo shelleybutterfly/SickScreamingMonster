@@ -1,5 +1,13 @@
 # SickScreamingMonster
 
+FINAL UPDATE:
+
+Well, we helped a few people; not sure exactly how much but a little. I'm updating the reddit post if you're curious.
+
+So, I imagine this project will not remain active after this. I fully intend never to look at it again. Love you all. :)
+
+---
+
 UPDATE: [approx. 10:30 EDT] i am livestreaming this on twitch. i may end up pulling it if the trolling becomes far more than the useful or fun stuff since, well, it's about the fun. mostly just text-to-speech on the IRC and me typing back. that is all. :)
 
 One Last Monster Script To Cough All Over Them All. This One Isn't Great. But It's To A Good Purpose. :)
