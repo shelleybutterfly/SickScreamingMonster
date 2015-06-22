@@ -2,7 +2,7 @@
 // @name /u/chelleliberty steam "SCREAMIN' MONSTERS'" Monster Minigame script
 // @namespace https://github.com/shelleybutterfly/SickScreamingMonster
 // @description A certainly not-so-wonderful script released on the last day of the minigame. Why? Who can say?
-// @version 0.0.4
+// @version 0.0.5
 // @match *://steamcommunity.com/minigame/towerattack*
 // @match *://steamcommunity.com//minigame/towerattack*
 // @grant none
@@ -10,6 +10,11 @@
 // @downloadURL https://raw.githubusercontent.com/shelleybutterfly/SickScreamingMonster/master/sickScreamingMonster.user.js
 // ==/UserScript==
 
+// OKAY: FINAL NOTE
+//
+// Sorry, folks, I didn't get this quite where I wanted it. It kinda works. I am going to be continuing to update. It should be
+// minorly useful for its stated purpose. That's about it. :) <3 you all!
+//
 
 // NOTE: 
 //   I forked this from wchill's repo; however, since this is really a recombination and then total
@@ -554,6 +559,9 @@
 	// [ VELOCITY HEURISTIC ] Are We There Yet - Settings
 	var ARE_WE_THERE_YET_INTERVAL_INITIALIZER = 250;
 	var ARE_WE_THERE_YET_DISTANCE_INITIALIZER = 30;
+	var ARE_WE_THERE_YET_MIN_DISTANCE = 1;
+	var ARE_WE_THERE_YET_MAX_DISTANCE = 50;
+
 	var awtyDistance = ARE_WE_THERE_YET_DISTANCE_INITIALIZER;
 	var awtyInterval = ARE_WE_THERE_YET_INTERVAL_INITIALIZER;
 	var AWTY_ADJUST_INCREMENT = 10;
@@ -590,20 +598,58 @@
 	}
 	Timer.prototype.start = function() {
 		if (this.instance !== null) return false;
-		logStart( this.name );
-		this.instance = setInterval( onTimer, this.interval );
+		this.logStartStop(this.name, "started");
+		this.instance = setInterval(this.onTimer, this.interval);
 		return true;
 	}
 	Timer.prototype.stop = function() {
 		if (this.instance === null) return false;
 		clearInterval(this.instance);
-		logStop( this.name );
+		this.logStartStop(this.name, "stopped");
+		this.instance = null;
 		return true;
 	}
 
-	function areWeThereYet() {
+
+	var awtyCheckLevel = 0;
+	var awtyCheckStartTime = 0; 
+
+	// for every 10 seconds we go *without* going up a level, decrement awtyDistance down to minimum; or, if we didn't 
+	// go 2 seconds without changing, then let's increment awtyDistance by 1 otherwise there's no upward pressure
+	function awtyHeuristicCheck() {
+		var level = getGameLevel();
+
+		if (awtyCheckLevel == 0) {
+			awtyCheckLevel = level;
+			awtyCheckStartTime = makeTime();
+		} else if (awtyCheckLevel != level) {
+			awtyCheckLevel = level;
+			var secondsBeforeChange = intDiv(makeTime() - awtyCheckStartTime, 1000);
+
+			if (secondsBeforeChange < 2) {
+				if ((awtyDistance + 1) < ARE_WE_THERE_YET_MAX_DISTANCE) {
+					awtyDistance += 1; log("upping awtyDistance from fast change in level");
+				} else {
+					log("would up awtyDistance from fast change in level, but already at max");
+				}
+			} else if (secondsBeforeChange > 10) {
+				var levelsToDecrease = intDiv(secondsBeforeChange, 10);
+
+				var testLevel = awtyDistance - levelsToDecrease;
+				var before = awtyDistance;
+				awtyDistance = Math.max(awtyDistance, testLevel);
+				var after = awtyDistance;
+
+				log("downing the awtyDistance due to very slow level change; was " + secondsBeforeChange + " before change. before: " + before + " after: " + after);
+			}
+		} 
+	}
+
+	function areWeThereYet() { return areWeGettingClose() || areWeFinallyThere(); }
+
+	function areWeGettingClose() {
 		var mod100 = (getGameLevel() % 100);
-		return (mod100 === 0) || (mod100 > awtyDistance);
+		return (mod100 > (100 - awtyDistance));
 	}
 
 	function areWeFinallyThere() {
@@ -616,19 +662,19 @@
 	var triggerLikeNew = function () { fn_TriggerAbility(ABILITIES.LIKE_NEW); };
 	var triggerWormhole = function () { fn_TriggerAbility(ABILITIES.WORMHOLE); };
 
-	var logStartStopTimer = function (timerName, startstop) {
+	var logStartStopTimer = function (timerName, startedstopped) {
 		log(timerName + " " + startedstopped + " at level " + getGameLevel(), 1);
 	}
 
 	// these two timers are for when we're approaching the 100 level; thus they are affected by velocity/momentum 
-	var likeNewTimer_ThereYet = new Timer(awtyInterval, triggerLikeNew, "'Like New' Timer", logStartStopTimer);
-	var wormholeTimer_ThereYet = new Timer(awtyInterval, triggerWormhole, "'Wormhole' Timer", logStartStopTimer);
+	var likeNewTimer_ThereYet = new Timer(awtyInterval, triggerLikeNew, "likeNewTimer_ThereYet", logStartStopTimer);
+	var wormholeTimer_ThereYet = new Timer(awtyInterval, triggerWormhole, "wormholeTimer_ThereYet", logStartStopTimer);
 
 	// these two are not, and are at a constant rate set above
-	var likeNewTimer_FinallyThere = new Timer(FINALLY_THERE_INTERVAL, triggerLikeNew, "'Like New' Timer", logStartStopTimer);
-	var wormholeTimer_FinallyThere = new Timer(FINALLY_THERE_INTERVAL, triggerWormhole, "'Wormhole' Timer", logStartStopTimer);
+	var likeNewTimer_FinallyThere = new Timer(FINALLY_THERE_INTERVAL, triggerLikeNew, "likeNewTimer_FinallyThere", logStartStopTimer);
+	var wormholeTimer_FinallyThere = new Timer(FINALLY_THERE_INTERVAL, triggerWormhole, "wormholeTimer_FinallyThere", logStartStopTimer);
 
-	var thereYetTimers = [likeNewTimer_ThereYet, likeNewTimer_FinallyThere];
+	var thereYetTimers = [ likeNewTimer_ThereYet, wormholeTimer_ThereYet ];
 	var finallyThereTimers = [ likeNewTimer_FinallyThere, wormholeTimer_FinallyThere ];
 
 	// eh, probably should be resetting the intervals on the timers rather than having two sets; let's try this first.
@@ -638,19 +684,19 @@
 
 			var level = getGameLevel();
 			
-			// not there yet; cram with not there yet timers
-			if (!areWeThereYet()) {
-				finallyThereTimers.forEach(function (item) { item.stop(); });
-				thereYetTimers.forEach(function (item) { item.start(); });
-			}
+			awtyHeuristicCheck();
 
-			// stop all timers; prepare for finally there
-			if (areWeThereYet() && !areWeFinallyThere()) {
-				thereYetTimers.concat(finallyThereTimers).forEach(function (item) { item.stop(); });
-			}
-
-			// DO IT!!!!! GO GO GO GO !!!!!
-			if (areWeFinallyThere()) {
+			if (!areWeFinallyThere()) {
+				if (!areWeGettingClose()) {
+					// not there yet; cram with not there yet timers
+					finallyThereTimers.forEach(function (item) { item.stop(); });
+					thereYetTimers.forEach(function (item) { item.start(); });
+				} else {
+					// stop all timers; prepare for finally there
+					thereYetTimers.concat(finallyThereTimers).forEach(function (item) { item.stop(); });
+				}
+			} else {
+				// DO IT!!!!! GO GO GO GO !!!!!
 				thereYetTimers.forEach(function (item) { item.stop(); });
 				finallyThereTimers.forEach(function (item) { item.start(); });
 			}
