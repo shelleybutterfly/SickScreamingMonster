@@ -1,6 +1,14 @@
 # SickScreamingMonster
 One Last Monster Script To Cough All Over Them All. This One Isn't Great. But It's To A Good Purpose. :)
 
+NOTE:
+
+   Okay, i posted this up on http://redd.it/3ap7cm; it won't have much time unfortunately. So much for 12 hours. Sorry i ended up not having much time to deal with it. I will try to get it out there, i am testing as we s... as i type.
+   
+   I may try to accept pull requests, but please keep them simple and to the point; fixing localStorage, etc. Same with issues. Anything complex won't be addressed. Anything that will take more than 2 minutes to look at, evaluate, and fix won't be addressed. Sorry, but, there's no time. :)
+   
+   <3
+
 NOTE: 
    I forked this from wchill's repo; however, since this is really a recombination and then total
    hacky mash-up (and not even a pretty one) of so many things, that I have just stripped it down
