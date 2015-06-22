@@ -606,24 +606,22 @@
 
 	function adjustTimerInterval() {
 		var level = getGameLevel();
-		var levelTarget = intDiv(levelTarget, 100);
+		//var levelTarget = intDiv(momentumTargetLevel, 100);
 		var nextTarget = (intDiv(level + 100, 100) + 1);
 
 		var adjustment = 0;
 
-		if (momentumTarget === 0) {
-			momentumTarget = nextTarget;
-		} else {
-			if (levelTarget != momentumTarget) {
-				levelTarget = levelTarget + ALLOWED_NUMBER_OF_OVERAGES;
+		if (momentumTarget !== 0) {
+			if (nextTarget != momentumTarget) {
+				nextTarget = nextTarget + ALLOWED_NUMBER_OF_OVERAGES;
 
-				var targetsMissedBy = nextTarget - levelTarget;
+				var targetsMissedBy = nextTarget - nextTarget;
 
 				if (targetsMissedBy <= -MOMENTUM_DECAY_FACTOR) {
-					debug_log("DEBUG: momentum decay, levelTarget: " + levelTarget + " targetsMissedBy: " + targetsMissedBy);
+					debug_log("DEBUG: momentum decay, nextTarget: " + nextTarget + " targetsMissedBy: " + targetsMissedBy);
 					adjustment = Math.max(targetsMissedBy, -AWTY_MAX_SINGLE_ADJUST_STEPS) * AWTY_ADJUST_INCREMENT;
 				} else {
-					debug_log("DEBUG: momentum increase, levelTarget: " + levelTarget + " targetsMissedBy: " + targetsMissedBy);
+					debug_log("DEBUG: momentum increase, nextTarget: " + nextTarget + " targetsMissedBy: " + targetsMissedBy);
 					adjustment = targetsMissedBy * AWTY_ADJUST_INCREMENT;
 				}
 
@@ -633,7 +631,11 @@
 				awtyInterval = Math.max(Math.min(newAwtyInterval, MAX_TIMER_INTERVAL), MIN_TIMER_INTERVAL);
 
 				log("possibly adjusting timer interval { oldvalue: " + oldvalue + " newvalue: + " + awtyInterval + " } ");
-			} 
+
+				momentumTarget = nextTarget;
+			}	
+		} else {
+			momentumTarget = nextTarget;
 		}
 	}
 
@@ -699,9 +701,12 @@
 
 	function areWeThereYet() { return areWeGettingClose() || areWeFinallyThere(); }
 
+	function getAwtyDistance() {
+		return useTrollTracker ? 10 : awtyDistance;
+	}
 	function areWeGettingClose() {
 		var mod100 = (getGameLevel() % 100);
-		return (mod100 > (100 - awtyDistance));
+		return (mod100 > (100 - getAwtyDistance()));
 	}
 
 	function areWeFinallyThere() {
@@ -889,7 +894,7 @@
 					switch( rgEntry.type ) {
 						case 'ability':
 							var ele = this.m_eleUpdateLogTemplate.clone();
-							if(useTrollTracker) {
+							if(false) {
 								if(getGameLevel() % 100 === 0 && [10, 11, 12, 15, 20].indexOf(rgEntry.ability) > -1) {
 									w.$J(ele).data('abilityid', rgEntry.ability );
 									w.$J('.name', ele).text( rgEntry.actor_name );
@@ -2081,6 +2086,9 @@
 
 	function fatal_error(message) { log(message, 0); }
 	function log(message, level) {
+		if ((level === undefined) || (level === null))
+			level = g_logLevel;
+
 		if (level <= g_logLevel) 
 			console.log(message);
 
