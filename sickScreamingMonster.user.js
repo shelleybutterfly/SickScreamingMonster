@@ -101,7 +101,7 @@
 	// OPTIONS
 	var clickRate = 20;
 	var g_logLevel = 1; // 5 is the most verbose, 0 is fatal errors only
-	var THROW_ON_ERROR = true; // whether to throw an exception on fatal errors to stop the script running. 
+	var THROW_ON_ERROR = false; // whether to throw an exception on fatal errors to stop the script running. 
 
 	var enableAutoClicker = getPreferenceBoolean("enableAutoClicker", true);
 
@@ -574,7 +574,11 @@
 
 	var awtyDistance = ARE_WE_THERE_YET_DISTANCE_INITIALIZER;
 	var awtyInterval = ARE_WE_THERE_YET_INTERVAL_INITIALIZER;
-	var AWTY_ADJUST_INCREMENT = 10;
+	var AWTY_ADJUST_INCREMENT = 5;
+	var AWTY_MAX_SINGLE_ADJUST_STEPS = 1;
+
+	// ratio of # of targets missed to # of actual steps increased
+	var AWTY_ADJUST_UP_TARGET_FACTOR = 4;
 
 	// [ MOMENTUM HEURISTIC ] - Settings
 	var ALLOWED_NUMBER_OF_OVERAGES = 10;
@@ -615,9 +619,11 @@
 
 				var targetsMissedBy = nextTarget - levelTarget;
 
-				if ((targetsMissedBy < ALLOWED_NUMBER_OF_OVERAGES) && (targetsMissedBy <= -MOMENTUM_DECAY_FACTOR)) {
-					adjustment = targetsMissedBy * AWTY_ADJUST_INCREMENT;
+				if (targetsMissedBy <= -MOMENTUM_DECAY_FACTOR) {
+					debug_log("DEBUG: momentum decay, levelTarget: " + levelTarget + " targetsMissedBy: " + targetsMissedBy);
+					adjustment = Math.max(targetsMissedBy, -AWTY_MAX_SINGLE_ADJUST_STEPS) * AWTY_ADJUST_INCREMENT;
 				} else {
+					debug_log("DEBUG: momentum increase, levelTarget: " + levelTarget + " targetsMissedBy: " + targetsMissedBy);
 					adjustment = targetsMissedBy * AWTY_ADJUST_INCREMENT;
 				}
 
@@ -2080,6 +2086,10 @@
 
 		if ((g_logLevel == 0) && THROW_ON_ERROR)
 			throw (new Error(message));
+	}
+	function debug_log(message) {
+		// eh, should be using the log level for this, but instead am needing to hurry so, not.
+		console.log(message);
 	}
 
 	if (w.SteamDB_Minigame_Timer) {
