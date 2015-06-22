@@ -96,6 +96,8 @@
 	//Version displayed to client, update along with the @version above
 	var SCRIPT_VERSION = '0.0.1';
 
+	var SHOW_HEURISTIC_INFO_INSTEAD_OF_EXPECTED_LEVEL_INFO = true;
+
 	// OPTIONS
 	var clickRate = 20;
 	var g_logLevel = 1; // 5 is the most verbose, 0 is fatal errors only
@@ -447,6 +449,14 @@
 		lane_info.appendChild(document.createElement("div"));
 		lane_info.appendChild(document.createElement("div"));
 
+		//var infoPanel = document.createElement("div");
+		//infoPanel.setAttribute("id", "infoPanel");
+		//infoPanel.setAttribute("style", "float: right; visibility: visible;");
+		//infoPanel.setAttribute("style", "float: right; visibility: hidden;");
+		//document.head.appendChild(infoPanel);
+
+		//document.createTextNode("")
+
 		info_box.appendChild(lane_info);
 		options_box.parentElement.appendChild(info_box);
 
@@ -521,7 +531,7 @@
 	var likeNewTimer = null;
 	var wormholeTimer = null;
  
-	var MIN_TIMER_INTERVAL = 250;
+	var MIN_TIMER_INTERVAL = 150;
 	var MAX_TIMER_INTERVAL = 1000;
 	var FINALLY_THERE_INTERVAL = 250;
 
@@ -558,7 +568,7 @@
 
 	// [ VELOCITY HEURISTIC ] Are We There Yet - Settings
 	var ARE_WE_THERE_YET_INTERVAL_INITIALIZER = 250;
-	var ARE_WE_THERE_YET_DISTANCE_INITIALIZER = 5;
+	var ARE_WE_THERE_YET_DISTANCE_INITIALIZER = 28;
 	var ARE_WE_THERE_YET_MIN_DISTANCE = 1;
 	var ARE_WE_THERE_YET_MAX_DISTANCE = 50;
 
@@ -568,20 +578,56 @@
 
 	// [ MOMENTUM HEURISTIC ] - Settings
 	var ALLOWED_NUMBER_OF_OVERAGES = 10;
-	var momentumTargetLevel = 0;
+	var MOMENTUM_DECAY_FACTOR = 6;
+	var momentumTarget = 0;
 
 	// basically this will reduce our timer interval by 10ms per minute, or basically allow a reset every 45 minutes or so
 	var DECAY_COUNTDOWN_TIMER = 30;
 	var decayCounter = 0;
 
+	/*
+	function updateInfoPanel() {
+		var infoPanel = document.getElementById("infoPanel");
+
+		while (infoPanel.firstChild) {
+			infoPanel.remove(infoPanel.firstChild);
+		}
+
+		infoPanel.appendChild(document.createTextNode("decayCounter: " + decayCounter));
+		infoPanel.appendChild(document.createTextNode("momentumTarget: " + momentumTarget));
+		infoPanel.appendChild(document.createTextNode("awtyInterval: " + awtyInterval));
+		infoPanel.appendChild(document.createTextNode("awtyDistance: " + awtyDistance));
+	}
+	*/
+
 	function adjustTimerInterval() {
 		var level = getGameLevel();
-		var nextTarget = (intDiv(level + 100, 100) + 1) * 100;
+		var levelTarget = intDiv(levelTarget, 100);
+		var nextTarget = (intDiv(level + 100, 100) + 1);
 
-		if (momentumTargetLevel === 0) {
-			momentumTargetLevel = nextTarget;
+		var adjustment = 0;
+
+		if (momentumTarget === 0) {
+			momentumTarget = nextTarget;
 		} else {
-			clearInterval()
+			if (levelTarget != momentumTarget) {
+				levelTarget = levelTarget + ALLOWED_NUMBER_OF_OVERAGES;
+
+				var targetsMissedBy = nextTarget - levelTarget;
+
+				if ((targetsMissedBy < ALLOWED_NUMBER_OF_OVERAGES) && (targetsMissedBy <= -MOMENTUM_DECAY_FACTOR)) {
+					adjustment = targetsMissedBy * AWTY_ADJUST_INCREMENT;
+				} else {
+					adjustment = targetsMissedBy * AWTY_ADJUST_INCREMENT;
+				}
+
+				var oldvalue = awtyInterval;
+
+				var newAwtyInterval = awtyInterval - awtyInterval;
+				awtyInterval = Math.max(Math.min(newAwtyInterval, MAX_TIMER_INTERVAL), MIN_TIMER_INTERVAL);
+
+				log("possibly adjusting timer interval { oldvalue: " + oldvalue + " newvalue: + " + awtyInterval + " } ");
+			} 
 		}
 	}
 
@@ -685,6 +731,7 @@
 			var level = getGameLevel();
 			
 			awtyHeuristicCheck();
+			adjustTimerInterval();
 
 			if (!areWeFinallyThere()) {
 				if (!areWeGettingClose()) {
@@ -2136,13 +2183,35 @@
 		document.LevelsSkip = element;
 	}
 
+	/*
+	function updateInfoPanel() {
+
+		var infoPanel = document.getElementById("infoPanel");
+
+		while (infoPanel.firstChild) {
+			infoPanel.remove(infoPanel.firstChild);
+		}
+
+		infoPanel.appendChild(document.createTextNode());
+		infoPanel.appendChild(document.createTextNode());
+		infoPanel.appendChild(document.createTextNode());
+		infoPanel.appendChild(document.createTextNode());
+	}
+	*/
+
+	function getInfoPanelInfoString() {
+		return "| decayCounter: " + decayCounter + " | momentumTarget: " + momentumTarget + " | awtyInterval: " + awtyInterval + " | awtyDistance: " + awtyDistance + " |";
+	}
+
 	function updateLevelInfoTitle(level)
 	{
 		var exp_lvl = expectedLevel(level);
 		var rem_time = countdown(exp_lvl.remaining_time);
 		var lvl_skip = getLevelsSkipped();
 
-		document.ExpectedLevel.textContent = 'Level: ' + level + ', Expected Level: ' + exp_lvl.expected_level + ', Likely Level: ' + exp_lvl.likely_level;
+		document.ExpectedLevel.textContent = SHOW_HEURISTIC_INFO_INSTEAD_OF_EXPECTED_LEVEL_INFO ? getInfoPanelInfoString() :
+				'Level: ' + level + ', Expected Level: ' + exp_lvl.expected_level + ', Likely Level: ' + exp_lvl.likely_level;
+
 		document.RemainingTime.textContent = 'Remaining Time: ' + rem_time.hours + ' hours, ' + rem_time.minutes + ' minutes.';
 		document.LevelsSkip.textContent = 'Skipped ' + lvl_skip + ' levels in last 5s.';
 	}
