@@ -2,11 +2,11 @@
 // @name /u/chelleliberty steam "SCREAMIN' MONSTERS'" Monster Minigame script
 // @namespace https://github.com/shelleybutterfly/SickScreamingMonster
 // @description A certainly not-so-wonderful script released on the last day of the minigame. Why? Who can say?
-// @version 0.0.2
+// @version 0.0.4
 // @match *://steamcommunity.com/minigame/towerattack*
 // @match *://steamcommunity.com//minigame/towerattack*
 // @grant none
-// @updateURL https://raw.githubusercontent.com/shelleybutterfly/SickScreamingMonster/master/sickScreamingMonster.user.js
+// @updateURL file:///G:\code\freshstart\SteamSummerMinigame\SickScreamingMonster\sickScreamingMonster.user.js
 // @downloadURL https://raw.githubusercontent.com/shelleybutterfly/SickScreamingMonster/master/sickScreamingMonster.user.js
 // ==/UserScript==
 
@@ -101,14 +101,15 @@
 	var removeInterface = getPreferenceBoolean("removeInterface", true); // get rid of a bunch of pointless DOM var removeParticles = getPreferenceBoolean("removeParticles", true);
 	var removeParticles = getPreferenceBoolean("removeParticles", true);
 	var removeFlinching = getPreferenceBoolean("removeFlinching", true);
-	var removeCritText = getPreferenceBoolean("removeCritText", false);
-	var removeGoldText = getPreferenceBoolean("removeGoldText", false);
-	var removeAllText = getPreferenceBoolean("removeAllText", false);
-	var enableAutoRefresh = getPreferenceBoolean("enableAutoRefresh", typeof GM_info !== "undefined");
-	var enableFingering = getPreferenceBoolean("enableFingering", true);
-	var disableRenderer = getPreferenceBoolean("disableRenderer", false);
+	var removeCritText = getPreferenceBoolean("removeCritText", true);
+	var removeGoldText = getPreferenceBoolean("removeGoldText", true);
+	var removeAllText = getPreferenceBoolean("removeAllText", true);
+	var enableAutoRefresh = true;
+	var enableFingering = getPreferenceBoolean("enableFingering", false);
+	var disableRenderer = getPreferenceBoolean("disableRenderer", true);
 	var useTrollTracker = getPreferenceBoolean("useTrollTracker", false);
 	var praiseGoldHelm = getPreferenceBoolean("praiseGoldHelm", true);
+	var enableElementLock = getPreferenceBoolean("enableElementLock", true);
 
 	var autoRefreshMinutes = 30; // refresh page after x minutes
 	var autoRefreshMinutesRandomDelay = 10;
@@ -127,7 +128,7 @@
 		"Gaben + Snoop Dogg": "http://i.imgur.com/9R0436k.gif",
 		"Wormhole Gaben": "http://i.imgur.com/6BuBgxY.png"
 	};
-	var goldHelmUI = getPreference("praiseGoldHelmImage", goldHelmURLs["Golden Gaben"]);
+	var goldHelmUI = getPreference("praiseGoldHelmImage", goldHelmURLs["Original Gold Helm"]);
 	var fixedUI = "http://i.imgur.com/ieDoLnx.png";
 	var trt_oldCrit = function() {};
 	var trt_oldPush = function() {};
@@ -515,75 +516,150 @@
 	var likeNewTimer = null;
 	var wormholeTimer = null;
  
-	var TIMER_INTERVAL = 100;
-	
+	var MIN_TIMER_INTERVAL = 250;
+	var MAX_TIMER_INTERVAL = 1000;
+	var FINALLY_THERE_INTERVAL = 250;
+
 	var ignoreWormholeLimits = true;
-	
-	var triggerLikeNew = function() { 
-		//triggerAbility(ABILITIES.LIKE_NEW); 
-		triggerAbilityImmediate(ABILITIES.LIKE_NEW);
-	};
-	var triggerWormhole = function() { 
-		//triggerAbility(ABILITIES.WORMHOLE);
-		triggerAbilityImmediate(ABILITIES.WORMHOLE);
-	};
+
+	function getGameLevel() {
+		return getScene().m_rgGameData.level + 1;
+	}
 
 	function makeTime() {
 		var aDate = new Date();
 		return aDate.getTime();
 	}	
 
-	var TOO_CLOSE = 70;
+	var _INT = 0;
+	var _REM = 0;
+	function intDiv(x,y) { return (x/y)|0; }
+	function modDiv(x,y) { return [ (x/y)|0, x % y ]; }
+	
+	// we need a simple, self-adjusting heuristic that will let us really crank but also handle tons of people
+	// or hardly any people using the script; so let's keep it simple...
 
-	function getGameLevel() { 
-		return getScene().m_rgGameData.level + 1; 
+	// i want some sort of velocity adjuster
+	// i want some sort of momentum adjuster
+
+	// for velocity i am trying adjusting the distance to 100 for areWeThereYet on-the-fly
+	// for momentum i am going to try an overrun counter with a decay upon no longer overrunning, but with an overrun tolerance
+	//    and then the adjustment will be +/- on the rate of WHs sent during the non-finally-there WH dumping
+
+	// i think that's enough 
+
+	// are we there yet == distance from x00 levels where we intend to stop slamming wormholes/damage and 
+	// to start doing other things and to stop and get ready for the x00 levels themselves
+
+	// [ VELOCITY HEURISTIC ] Are We There Yet - Settings
+	var ARE_WE_THERE_YET_INTERVAL_INITIALIZER = 250;
+	var ARE_WE_THERE_YET_DISTANCE_INITIALIZER = 30;
+	var awtyDistance = ARE_WE_THERE_YET_DISTANCE_INITIALIZER;
+	var awtyInterval = ARE_WE_THERE_YET_INTERVAL_INITIALIZER;
+	var AWTY_ADJUST_INCREMENT = 10;
+
+	// [ MOMENTUM HEURISTIC ] - Settings
+	var ALLOWED_NUMBER_OF_OVERAGES = 10;
+	var momentumTargetLevel = 0;
+
+	// basically this will reduce our timer interval by 10ms per minute, or basically allow a reset every 45 minutes or so
+	var DECAY_COUNTDOWN_TIMER = 30;
+	var decayCounter = 0;
+
+	function adjustTimerInterval() {
+		var level = getGameLevel();
+		var nextTarget = (intDiv(level + 100, 100) + 1) * 100;
+
+		if (momentumTargetLevel === 0) {
+			momentumTargetLevel = nextTarget;
+		} else {
+			clearInterval()
+		}
 	}
 
-	function areWeThereYet() { 
+	var Timer = function( interval, onTimer, name, logStartStop ) {
+		this.interval = interval;
+		this.onTimer = onTimer;
+		this.name = name;
+		this.logStartStop = logStartStop;
+	}
+	Timer.prototype.instance = null;
+	Timer.prototype.setInterval = function( interval, onTimer ) { 
+		this.interval = interval;
+		this.onTimer = onTimer;
+	}
+	Timer.prototype.start = function() {
+		if (this.instance !== null) return false;
+		logStart( this.name );
+		this.instance = setInterval( onTimer, this.interval );
+		return true;
+	}
+	Timer.prototype.stop = function() {
+		if (this.instance === null) return false;
+		clearInterval(this.instance);
+		logStop( this.name );
+		return true;
+	}
+
+	function areWeThereYet() {
 		var mod100 = (getGameLevel() % 100);
-		return (mod100 == 0) || (mod100 > TOO_CLOSE);
+		return (mod100 === 0) || (mod100 > awtyDistance);
 	}
-	
-	function areWeFinallyThere()    { 
-		return getGameLevel() % 100; 
+
+	function areWeFinallyThere() {
+		return (getGameLevel() % 100) === 0;
 	}
-	
-	
+
+	//var triggerFunction = function (abilityId) { triggerAbility(abilityId) };
+	var fn_TriggerAbility = function (abilityId) { triggerAbilityImmediate(abilityId) };
+
+	var triggerLikeNew = function () { fn_TriggerAbility(ABILITIES.LIKE_NEW); };
+	var triggerWormhole = function () { fn_TriggerAbility(ABILITIES.WORMHOLE); };
+
+	var logStartStopTimer = function (timerName, startstop) {
+		log(timerName + " " + startedstopped + " at level " + getGameLevel(), 1);
+	}
+
+	// these two timers are for when we're approaching the 100 level; thus they are affected by velocity/momentum 
+	var likeNewTimer_ThereYet = new Timer(awtyInterval, triggerLikeNew, "'Like New' Timer", logStartStopTimer);
+	var wormholeTimer_ThereYet = new Timer(awtyInterval, triggerWormhole, "'Wormhole' Timer", logStartStopTimer);
+
+	// these two are not, and are at a constant rate set above
+	var likeNewTimer_FinallyThere = new Timer(FINALLY_THERE_INTERVAL, triggerLikeNew, "'Like New' Timer", logStartStopTimer);
+	var wormholeTimer_FinallyThere = new Timer(FINALLY_THERE_INTERVAL, triggerWormhole, "'Wormhole' Timer", logStartStopTimer);
+
+	var thereYetTimers = [likeNewTimer_ThereYet, likeNewTimer_FinallyThere];
+	var finallyThereTimers = [ likeNewTimer_FinallyThere, wormholeTimer_FinallyThere ];
+
+	// eh, probably should be resetting the intervals on the timers rather than having two sets; let's try this first.
 	function MainLoop() {
 		if (!isAlreadyRunning) {
 			isAlreadyRunning = true;
 
 			var level = getGameLevel();
 			
-			if (areWeThereYet()) {
-				if (likeNewTimer === null) {
-					console.log("triggerLikeNew setInterval at Level " + level );
-					likeNewTimer = setInterval(triggerLikeNew, TIMER_INTERVAL);
-				}
-					
-				if (wormholeTimer === null) {
-					console.log("triggerWormhole setInterval at Level " + level );
-					wormholeTimer = setInterval(triggerWormhole, TIMER_INTERVAL);
-				}
-			} else {
-				if (likeNewTimer !== null) {
-					console.log("triggerLikeNew clearInterval at Level " + level );
-					clearInterval(likeNewTimer);
-					likeNewTimer = null;
-				}
-					
-				if (wormholeTimer !== null) {
-					console.log("triggerWormhole clearInterval at Level " + level );
-					clearInterval(wormholeTimer);
-					wormholeTimer = null;
-				}
+			// not there yet; cram with not there yet timers
+			if (!areWeThereYet()) {
+				finallyThereTimers.forEach(function (item) { item.stop(); });
+				thereYetTimers.forEach(function (item) { item.start(); });
 			}
-			
+
+			// stop all timers; prepare for finally there
+			if (areWeThereYet() && !areWeFinallyThere()) {
+				thereYetTimers.concat(finallyThereTimers).forEach(function (item) { item.stop(); });
+			}
+
+			// DO IT!!!!! GO GO GO GO !!!!!
+			if (areWeFinallyThere()) {
+				thereYetTimers.forEach(function (item) { item.stop(); });
+				finallyThereTimers.forEach(function (item) { item.start(); });
+			}
+
 			updateLaneData();
 			attemptRespawn();
 
 			if (areWeFinallyThere())
-				goToRainingLane()
+				goToRainingLane();
 			else
 				goToLaneWithBestTarget();
 
@@ -610,7 +686,7 @@
 				getScene().m_rgGameData.lanes[getScene().m_rgPlayerData.current_lane].element
 			);
 
-			qxp ("Ticked. Current clicks per second: " + currentClickRate + ". Current damage per second: " + (damagePerClick * currentClickRate), 4);
+			log("Ticked. Current clicks per second: " + currentClickRate + ". Current damage per second: " + (damagePerClick * currentClickRate), 4);
 
 			if(disableRenderer) {
 				getScene().Tick();
@@ -778,7 +854,6 @@
 	
 	function useOffensiveAbilities() {
 		usePumpedUp_ReflectDamage_StealHealth();
-		useFeelingLuckyIfRelevant();
 		useCrippleMonsterIfRelevant();
 		useCrippleSpawnerIfRelevant();
 		useFeelingLuckyIfRelevant();
@@ -790,42 +865,54 @@
 		useMoraleBoosterIfRelevant();
 	}
 	
+	var LIKE_NEW_COUNTDOWN_TIMER = 15;
+	var likeNewCountdown = 15;
 	function useOtherAbilities() {
 		useCooldownIfRelevant();		
 		useGoldRainIfRelevant();
 		useMetalDetectorOrTreasureIfRelevant();
+		useFeelingLuckyIfRelevant();
 		useMedics();
 		useGodMode();
+		
+		if (likeNewCountdown > 0)
+			likeNewCountdown = likeNewCountdown - 1;
+
+		if ( getAbilityItemCount(ABILITIES.LIKE_NEW) > getAbilityItemCount(ABILITIES.WORMHOLE) )  {
+			if (likeNewCountdown <= 0) {
+				likeNewCountdown = LIKE_NEW_COUNTDOWN_TIMER;
+				triggerAbility(ABILITIES.LIKE_NEW);
+			}
+		}
+
 		//tryUsingAbility(ABILITIES.RESSURECTION);
 	}
 	
 	function refreshPlayerData() {
 		log("Refreshing player data", 2);
 
-		w.g_Server.GetPlayerData(
-			function(rgResult) {
-				var instance = getScene();
+		var resultHandler = function (rgResult) {
+			var instance = getScene();
 
-				if (rgResult.response.player_data) {
-					instance.m_rgPlayerData = rgResult.response.player_data;
-					instance.ApplyClientOverrides('player_data');
-					instance.ApplyClientOverrides('ability');
+			if (rgResult.response.player_data) {
+				instance.m_rgPlayerData = rgResult.response.player_data;
+				instance.ApplyClientOverrides('player_data');
+				instance.ApplyClientOverrides('ability');
+			}
+
+			if (rgResult.response.tech_tree) {
+				instance.m_rgPlayerTechTree = rgResult.response.tech_tree;
+				if (rgResult.response.tech_tree.upgrades) {
+					instance.m_rgPlayerUpgrades = w.V_ToArray(rgResult.response.tech_tree.upgrades);
+				} else {
+					instance.m_rgPlayerUpgrades = [];
 				}
+			}
 
-				if (rgResult.response.tech_tree) {
-					instance.m_rgPlayerTechTree = rgResult.response.tech_tree;
-					if (rgResult.response.tech_tree.upgrades) {
-						instance.m_rgPlayerUpgrades = w.V_ToArray(rgResult.response.tech_tree.upgrades);
-					} else {
-						instance.m_rgPlayerUpgrades = [];
-					}
-				}
+			instance.OnReceiveUpdate();
+		};
 
-				instance.OnReceiveUpdate();
-			},
-			function() {},
-			true
-		);
+		w.g_Server.GetPlayerData(resultHandler, function () { }, true);
 	}
 
 	function makeDropdown(name, desc, value, values, listener) {
@@ -1067,12 +1154,12 @@
 		}
 	}
 
-	var LOCAL_STORAGE_NS = "chelleliberty/";
+	var LOCAL_STORAGE_NS = "steamdb-minigame";
 	
 	function setPreference(key, value) {
 		try {
-			if (localStorage !== 'undefined') {
-				localStorage.setItem('steamdb-minigame/' + LOCAL_STORAGE_NS + key, value);
+			if (w.localStorage !== 'undefined') {
+				w.localStorage.setItem(LOCAL_STORAGE_NS + "/" + key, value);
 			}
 		} catch (e) {
 			console.log(e); // silently ignore error
@@ -1081,8 +1168,8 @@
 
 	function getPreference(key, defaultValue) {
 		try {
-			if (localStorage !== 'undefined') {
-				var result = localStorage.getItem('steamdb-minigame/' + LOCAL_STORAGE_NS + key);
+			if (w.localStorage !== 'undefined') {
+				var result = w.localStorage.getItem(LOCAL_STORAGE_NS + "/" + key);
 				return (result !== null ? result : defaultValue);
 			}
 		} catch (e) {
@@ -1427,7 +1514,7 @@
 
 	function useClusterBombIfRelevant() {
 		//Check if Cluster Bomb is purchased and cooled down		
-		if (!canUseAbility(ABILITIES.CLUSTER_BOMB) || !canUseOffensiveAbility() || Math.random() > control.useAbilityChance) {
+		if (!canUseAbility(ABILITIES.CLUSTER_BOMB) || !canUseOffensiveAbility()) {
 			return;
 		}
 
@@ -1540,15 +1627,17 @@
 	}
 
 	function useCrippleMonsterIfRelevant() {
-		if (areWeThereYetAreWeThereYet())
-			triggerAbility(ABILITIES.CRIPPLE_MONSTER);
+		if (areWeThereYet())
+			return;
+
+		triggerAbility(ABILITIES.CRIPPLE_MONSTER);
 			
 		return;
 	}
 
 	function useCrippleSpawnerIfRelevant() {
 		// Check if Cripple Spawner is available
-		if (!canUseItem(ABILITIES.CRIPPLE_SPAWNER) || Math.random() > control.useAbilityChance) {
+		if (!canUseItem(ABILITIES.CRIPPLE_SPAWNER)) {
 			return;
 		}
 
@@ -1556,6 +1645,7 @@
 		var currentLane = getScene().m_nExpectedLane;
 		var enemySpawnerExists = false;
 		var enemySpawnerHealthPercent = 0.0;
+
 		//Count each slot in lane
 		for (var i = 0; i < 4; i++) {
 			var enemy = getScene().GetEnemy(currentLane, i);
@@ -1596,7 +1686,7 @@
 
 	function useMetalDetectorOrTreasureIfRelevant() {
 		// get a few early game treasures; but then wait a while longer
-		if ((getGameLevel() <= 30 || getGameLevel() >= 100000) && canUseItem(ABILITIES.TREASURE)) {
+		if ((getGameLevel() <= 30 || getGameLevel() >= 1000) && canUseItem(ABILITIES.TREASURE)) {
 			triggerItem(ABILITIES.TREASURE);
 		}
 		
@@ -1619,6 +1709,9 @@
 	function useMaxElementalDmgIfRelevant() {
 		// Check if Max Elemental Damage is purchased
 		if (isAbilityActive(ABILITIES.MAX_ELEMENTAL_DAMAGE))
+			return;
+
+		if (areWeThereYet())
 			return;
 			
 		if (tryUsingItem(ABILITIES.MAX_ELEMENTAL_DAMAGE, true)) {
@@ -2175,8 +2268,7 @@
 				window.document.dispatchEvent(new Event('event:welcomePanelVisible'));
 				clearInterval(waitForWelcomePanelInterval);
 			}
-			else if(w.g_Minigame && w.g_Minigame.CurrentScene() && w.g_Minigame.CurrentScene().m_rgPlayerTechTree
-					&& !w.g_Minigame.CurrentScene().m_rgPlayerTechTree.badge_points) { // techtree but no points
+			else if(w.g_Minigame && w.g_Minigame.CurrentScene() && w.g_Minigame.CurrentScene().m_rgPlayerTechTree && !w.g_Minigame.CurrentScene().m_rgPlayerTechTree.badge_points) { // techtree but no points
 				clearInterval(waitForWelcomePanelInterval);
 			}
 			else if(--checkTicks <= 0) { // give up
