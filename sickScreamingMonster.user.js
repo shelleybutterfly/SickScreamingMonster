@@ -2,7 +2,7 @@
 // @name /u/chelleliberty steam "SCREAMIN' MONSTERS'" Monster Minigame script
 // @namespace https://github.com/shelleybutterfly/SickScreamingMonster
 // @description A certainly not-so-wonderful script released on the last day of the minigame. Why? Who can say?
-// @version 0.0.5
+// @version 0.0.6
 // @match *://steamcommunity.com/minigame/towerattack*
 // @match *://steamcommunity.com//minigame/towerattack*
 // @grant none
