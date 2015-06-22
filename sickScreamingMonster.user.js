@@ -2,12 +2,12 @@
 // @name /u/chelleliberty steam "SCREAMIN' MONSTERS'" Monster Minigame script
 // @namespace https://github.com/shelleybutterfly/SickScreamingMonster
 // @description A certainly not-so-wonderful script released on the last day of the minigame. Why? Who can say?
-// @version 0.0.1
+// @version 0.0.2
 // @match *://steamcommunity.com/minigame/towerattack*
 // @match *://steamcommunity.com//minigame/towerattack*
 // @grant none
-// @updateURL file:///G:\code\freshstart\SteamSummerMinigame\SickScreamingMonster\sickScreamingMonster.user.js
-// @downloadURL file:///G:\code\freshstart\SteamSummerMinigame\SickScreamingMonster\sickScreamingMonster.user.js
+// @updateURL https://raw.githubusercontent.com/shelleybutterfly/SickScreamingMonster/master/sickScreamingMonster.user.js
+// @downloadURL https://raw.githubusercontent.com/shelleybutterfly/SickScreamingMonster/master/sickScreamingMonster.user.js
 // ==/UserScript==
 
 
@@ -280,7 +280,7 @@
 	}
 
 	function firstRun() {
-		logMessage("Starting /u/chelleliberty's script (version " + SCRIPT_VERSION + ")", 1);
+		log("Starting /u/chelleliberty's script (version " + SCRIPT_VERSION + ")", 1);
 
 		trt_oldCrit = getScene().DoCritEffect;
 		trt_oldPush = getScene().m_rgClickNumbers.push;
@@ -610,7 +610,7 @@
 				getScene().m_rgGameData.lanes[getScene().m_rgPlayerData.current_lane].element
 			);
 
-			logMessage("Ticked. Current clicks per second: " + currentClickRate + ". Current damage per second: " + (damagePerClick * currentClickRate), 4);
+			qxp ("Ticked. Current clicks per second: " + currentClickRate + ". Current damage per second: " + (damagePerClick * currentClickRate), 4);
 
 			if(disableRenderer) {
 				getScene().Tick();
@@ -657,7 +657,7 @@
 						var goldPerSecond = enemy.m_data.gold * goldPerClickPercentage * currentClickRate;
 						getScene().ClientOverride('player_data', 'gold', getScene().m_rgPlayerData.gold + goldPerSecond);
 						getScene().ApplyClientOverrides('player_data', true);
-						logMessage(
+						log(
 							"Raining gold ability is active in current lane. Percentage per click: " + goldPerClickPercentage + "%. Approximately gold per second: " + goldPerSecond,
 							4
 						);
@@ -688,7 +688,7 @@
 
 		if(w.CUI && !replacedCUI) {
 			replacedCUI = true;
-			logMessage("Anti nuke in effect", 1);
+			log("Anti nuke in effect", 1);
 			w.CUI.prototype.UpdateLog = function( rgLaneLog )
 			{
 				var abilities = this.m_Game.m_rgTuningData.abilities;
@@ -724,7 +724,7 @@
 									w.$J(ele).v_tooltip({tooltipClass: 'ta_tooltip', location: 'top'});
 	
 									this.m_eleUpdateLogContainer[0].insertBefore(ele[0], this.m_eleUpdateLogContainer[0].firstChild);
-									logMessage(rgEntry.actor_name + " used " + this.m_Game.m_rgTuningData.abilities[ rgEntry.ability ].name + " on level " + getGameLevel(), 1);
+									log(rgEntry.actor_name + " used " + this.m_Game.m_rgTuningData.abilities[ rgEntry.ability ].name + " on level " + getGameLevel(), 1);
 									w.$J('.name', ele).attr( "style", "color: red; font-weight: bold;" );
 								} else if(getGameLevel() % 100 !== 0 && getGameLevel() % 10 > 3 && rgEntry.ability === 26) {
 									w.$J(ele).data('abilityid', rgEntry.ability );
@@ -800,7 +800,7 @@
 	}
 	
 	function refreshPlayerData() {
-		logMessage("Refreshing player data", 2);
+		log("Refreshing player data", 2);
 
 		w.g_Server.GetPlayerData(
 			function(rgResult) {
@@ -917,10 +917,10 @@
 		if (typeof enemyData !== "undefined") {
 			var enemyType = enemyData.type;
 			if (enemyType != ENEMY_TYPE.BOSS) {
-				logMessage('Refreshing, not boss', 5);
+				log('Refreshing, not boss', 5);
 				w.location.reload(true);
 			} else {
-				logMessage('Not refreshing, A boss!', 5);
+				log('Not refreshing, A boss!', 5);
 				setTimeout(autoRefreshHandler, 3000);
 			}
 		} else {
@@ -965,7 +965,7 @@
 			value = handleCheckBox(event);
 		}
 		enableAutoClicker = value;
-		logMessage('Autoclicker is ' + enableAutoClicker, 1);
+		log('Autoclicker is ' + enableAutoClicker, 1);
 	}
 
 	function toggleAutoRefresh(event) {
@@ -1125,7 +1125,7 @@
 		var lastLeveled = -1;
 
 		for (var i=0; i < elementMultipliers.length; i++){
-			logMessage("Element " + i + " is at level " + (elementMultipliers[i]-1)/1.5, 3);
+			log("Element " + i + " is at level " + (elementMultipliers[i]-1)/1.5, 3);
 			if ((elementMultipliers[i]-1)/1.5 >= 3) {
 				leveled++;
 				// Only used if there is only one so overwriting it doesn't matter
@@ -1134,13 +1134,13 @@
 		}
 
 		if (leveled >= 2) {
-			logMessage("More than 2 elementals leveled to 3 or above, not locking.", 1);
+			log("More than 2 elementals leveled to 3 or above, not locking.", 1);
 			return;
 		} else if (leveled == 1) {
-			logMessage("Found existing lock on " + lastLeveled + ", locking to it.", 1);
+			log("Found existing lock on " + lastLeveled + ", locking to it.", 1);
 			lockToElement(lastLeveled);
 		} else {
-			logMessage("Locking to element " + elem + " as chosen by SteamID", 1);
+			log("Locking to element " + elem + " as chosen by SteamID", 1);
 			lockToElement(elem);
 		}
 	}
@@ -1205,13 +1205,13 @@
 			var enemyType = enemyData.type;
 			
 			if (enemyType == ENEMY_TYPE.BOSS) {
-				logMessage('In lane 0, there is a boss, avoiding', 4);
+				log('In lane 0, there is a boss, avoiding', 4);
 				targetLane = 1;
 			}
 		}
 
 		if (getScene().m_nExpectedLane != targetLane) {
-			logMessage('Switching to raining lane' + targetLane, 3);
+			log('Switching to raining lane' + targetLane, 3);
 			getScene().TryChangeLane(targetLane);
 		}
 	}
@@ -1276,7 +1276,7 @@
 					var stacks = 0;
 					if (typeof getScene().m_rgLaneData[i].abilities[17] != 'undefined') {
 						stacks = getScene().m_rgLaneData[i].abilities[17];
-						logMessage('stacks: ' + stacks, 3);
+						log('stacks: ' + stacks, 3);
 					}
 					for (var m = 0; m < getScene().m_rgEnemies.length; m++) {
 						var enemyGold = getScene().m_rgEnemies[m].m_data.gold;
@@ -1322,7 +1322,7 @@
 			if (preferredLane != -1 && preferredTarget != -1) {
 				lowLane = preferredLane;
 				lowTarget = preferredTarget;
-				logMessage('Switching to a lane with best raining gold benefit', 2);
+				log('Switching to a lane with best raining gold benefit', 2);
 			}
 
 			// If we just finished looking at spawners,
@@ -1349,13 +1349,13 @@
 		// go to the chosen lane
 		if (targetFound) {
 			if (getScene().m_nExpectedLane != lowLane) {
-				logMessage('Switching to lane' + lowLane, 3);
+				log('Switching to lane' + lowLane, 3);
 				getScene().TryChangeLane(lowLane);
 			}
 
 			// target the chosen enemy
 			if (getScene().m_nTarget != lowTarget) {
-				logMessage('Switching targets', 3);
+				log('Switching targets', 3);
 				getScene().TryChangeTarget(lowTarget);
 			}
 
@@ -1390,13 +1390,13 @@
 	function useMedics() {
 		// check if Medics is purchased and cooled down
 		if (tryUsingAbility(ABILITIES.MEDICS)) {
-			logMessage('Medics is purchased, cooled down. Trigger it.', 2);
+			log('Medics is purchased, cooled down. Trigger it.', 2);
 		}
 	}
 	
 	function useGodMode() {
 		if (tryUsingItem(ABILITIES.GOD_MODE)) {
-			logMessage('We have god mode, cooled down. Trigger it.', 2);
+			log('We have god mode, cooled down. Trigger it.', 2);
 		}
 	}
 	
@@ -1416,12 +1416,12 @@
 		// check if Crits is purchased and cooled down
 		if (tryUsingItem(ABILITIES.CRIT)) {
 			// Crits is purchased, cooled down, and needed. Trigger it.
-			logMessage('Crit chance is always good.', 3);
+			log('Crit chance is always good.', 3);
 		}
 
 		// check if Good Luck Charms is purchased and cooled down
 		if (tryUsingAbility(ABILITIES.GOOD_LUCK_CHARMS)) {
-			logMessage('Good Luck Charms is purchased, cooled down, and needed. Trigger it.', 2);
+			log('Good Luck Charms is purchased, cooled down, and needed. Trigger it.', 2);
 		}
 	}
 
@@ -1505,7 +1505,7 @@
 		}
 		if (numberOfWorthwhileEnemies >= 2) {
 			// Morale Booster is purchased, cooled down, and needed. Trigger it.
-			logMessage('Morale Booster is purchased, cooled down, and needed. Trigger it.', 2);
+			log('Morale Booster is purchased, cooled down, and needed. Trigger it.', 2);
 			triggerAbility(ABILITIES.MORALE_BOOSTER);
 		}
 	}
@@ -1534,7 +1534,7 @@
 
 		// If there is a spawner and it's health is between 60% and 30%, nuke it!
 		if (enemySpawnerExists && enemySpawnerHealthPercent < 0.6 && enemySpawnerHealthPercent > 0.3) {
-			logMessage("Tactical Nuke is purchased, cooled down, and needed. Nuke 'em.", 2);
+			log("Tactical Nuke is purchased, cooled down, and needed. Nuke 'em.", 2);
 			triggerAbility(ABILITIES.TACTICAL_NUKE);
 		}
 	}
@@ -1569,7 +1569,7 @@
 
 		// If there is a spawner and it's health is above 95%, cripple it!
 		if (enemySpawnerExists && enemySpawnerHealthPercent > 0.60) {
-			logMessage("Cripple Spawner available, and needed. Cripple 'em.", 2);
+			log("Cripple Spawner available, and needed. Cripple 'em.", 2);
 			triggerItem(ABILITIES.CRIPPLE_SPAWNER);
 		}
 	}
@@ -1588,7 +1588,7 @@
 
 			//if (enemyBossHealthPercent >= 0.6) { // We want sufficient time for the gold rain to be applicable
 				// Gold Rain is purchased, cooled down, and needed. Trigger it.
-				//logMessage('Gold rain is purchased and cooled down, Triggering it on boss', 2);
+				//log('Gold rain is purchased and cooled down, Triggering it on boss', 2);
 				triggerItem(ABILITIES.RAINING_GOLD);
 			//}
 		//}
@@ -1609,7 +1609,7 @@
 			if (canUseAbility(ABILITIES.METAL_DETECTOR)) {
 				triggerAbility(ABILITIES.METAL_DETECTOR);
 			} else if (canUseItem(ABILITIES.TREASURE)) {
-				logMessage('Treasure is available and cooled down, Triggering it on boss', 2);
+				log('Treasure is available and cooled down, Triggering it on boss', 2);
 				triggerItem(ABILITIES.TREASURE);
 			}
 		}
@@ -1622,7 +1622,7 @@
 			return;
 			
 		if (tryUsingItem(ABILITIES.MAX_ELEMENTAL_DAMAGE, true)) {
-			logMessage('Max Elemental Damage is purchased and cooled down, triggering it.', 2);
+			log('Max Elemental Damage is purchased and cooled down, triggering it.', 2);
 		}
 	}
 
@@ -1656,7 +1656,7 @@
 		// Start a timer between 1 and 5 seconds to try to use LikeNew.
 		//var rand = Math.floor(Math.random() * control.useLikeNewMaxTime - control.useLikeNewMinTime + control.useLikeNewMinTime);
 		//setTimeout(useLikeNew, 1);
-		//logMessage('Attempting to use Like New after ' + rand + 'ms.', 2);
+		//log('Attempting to use Like New after ' + rand + 'ms.', 2);
 		//canUseLikeNew = false;
 	}
 
@@ -1665,7 +1665,7 @@
 		var level = getGameLevel();
 		if (level % control.rainingRounds === 0) {
 			if (tryUsingItem(ABILITIES.LIKE_NEW)) {
-				logMessage('We can actually use Like New semi-reliably! Cooldowns-b-gone.', 2);
+				log('We can actually use Like New semi-reliably! Cooldowns-b-gone.', 2);
 				//canUseLikeNew = true;
 			}
 		}
@@ -1674,7 +1674,7 @@
 	function useReviveIfRelevant(level) {
 		if (level % 10 === 9 && Math.random() <= control.useAbilityChance && tryUsingItem(ABILITIES.RESURRECTION)) {
 			// Resurrect is purchased and we are using it.
-			logMessage('Triggered Resurrect.');
+			log('Triggered Resurrect.');
 		}
 	}
 	*/
@@ -1856,8 +1856,8 @@
 			return elementPriorities[lanes[b].element - 1] - elementPriorities[lanes[a].element - 1];
 		});
 
-		logMessage("Lane IDs  : " + lanePointers[0] + " " + lanePointers[1] + " " + lanePointers[2], 4);
-		logMessage("Elements  : " + lanes[lanePointers[0]].element + " " + lanes[lanePointers[1]].element + " " + lanes[lanePointers[2]].element, 4);
+		log("Lane IDs  : " + lanePointers[0] + " " + lanePointers[1] + " " + lanePointers[2], 4);
+		log("Elements  : " + lanes[lanePointers[0]].element + " " + lanes[lanePointers[1]].element + " " + lanes[lanePointers[2]].element, 4);
 
 		return lanePointers;
 	}
@@ -1890,10 +1890,10 @@
 	function fatal_error(message) { log(message, 0); }
 	function log(message, level) {
 		if (level <= g_logLevel) 
-			console.log(msg);
+			console.log(message);
 
 		if ((g_logLevel == 0) && THROW_ON_ERROR)
-			throw(new Error(msg));
+			throw (new Error(message));
 	}
 
 	if (w.SteamDB_Minigame_Timer) {
